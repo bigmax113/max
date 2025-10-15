@@ -1,1 +1,82 @@
-templates/index.html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>AI DOCX Translator</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="container">
+  <h2>AI DOCX Translator (Smartcat)</h2>
+
+  <section>
+    <h3>Шаг 1. Загрузить TMX (опционально)</h3>
+    <input type="file" id="tmxInput">
+    <button id="tmxBtn">Загрузить TMX</button>
+  </section>
+
+  <section>
+    <h3>Шаг 2. Перевести DOCX</h3>
+    <label>Исходный язык:</label>
+    <select id="srcLang"></select>
+    <label>Целевой язык:</label>
+    <select id="trgLang"></select>
+    <br><br>
+    <input type="file" id="docxInput">
+    <button id="translateBtn">Перевести DOCX</button>
+  </section>
+
+  <pre id="resultBox"></pre>
+</div>
+
+<script>
+const langs = {
+  "Азербайджанский":"az","Албанский":"sq","Английский":"en","Арабский":"ar","Армянский":"hy",
+  "Африканс":"af","Белорусский":"be","Болгарский":"bg","Боснийский":"bs","Венгерский":"hu",
+  "Греческий":"el","Грузинский":"ka","Датский":"da","Испанский":"es","Итальянский":"it",
+  "Казахский":"kk","Киргизский":"ky","Китайский":"zh-CN","Латышский":"lv","Литовский":"lt",
+  "Македнский":"mk","Молдавский":"mo","Нидерландский":"nl","Немецкий":"de","Норвежский":"no",
+  "Польский":"pl","Португальский":"pt","Румынский":"ro","Русский":"ru","Сербский":"sr",
+  "Сербский-латинский":"sr-lat","Словенский":"sl","Словацкий":"sk","Таджикскийй":"tg",
+  "Турецкий":"tr","Украинский":"uk","Узбекский":"uz","Финский":"fi","Французский":"fr",
+  "Хорватский":"hr","Чешский":"cs","Шведский":"sv","Эстонский":"et"
+};
+for (const [name, code] of Object.entries(langs)) {
+  srcLang.innerHTML += `<option value="${code}">${name}</option>`;
+  trgLang.innerHTML += `<option value="${code}">${name}</option>`;
+}
+
+tmxBtn.onclick = async ()=>{
+  const f=document.getElementById("tmxInput").files[0];
+  if(!f){alert("Выбери TMX");return;}
+  const fd=new FormData(); fd.append("file",f);
+  resultBox.textContent="⏳ Загружаем TMX...";
+  const r=await fetch("/load_tmx",{method:"POST",body:fd});
+  const d=await r.json();
+  resultBox.textContent=d.message||d.error;
+};
+
+translateBtn.onclick = async ()=>{
+  const f=document.getElementById("docxInput").files[0];
+  if(!f){alert("Выбери DOCX");return;}
+  const fd=new FormData();
+  fd.append("file",f);
+  fd.append("source_lang",srcLang.value);
+  fd.append("target_lang",trgLang.value);
+  resultBox.textContent="⏳ Перевод...";
+  const r=await fetch("/translate_docx",{method:"POST",body:fd});
+  if(r.ok){
+    const blob=await r.blob();
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url; a.download=f.name.replace(".docx","_Translate.docx");
+    a.click();
+    resultBox.textContent="✅ Готово, файл скачан.";
+  }else{
+    const t=await r.text();
+    resultBox.textContent="Ошибка: "+t;
+  }
+};
+</script>
+</body>
+</html>
